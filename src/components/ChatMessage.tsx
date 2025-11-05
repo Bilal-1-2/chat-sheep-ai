@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
+import { SentimentResult, getSentimentEmoji, getSentimentColor } from "@/lib/sentimentAnalysis";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
   content: string;
+  sentiment?: SentimentResult;
 }
 
-export const ChatMessage = ({ role, content }: ChatMessageProps) => {
+export const ChatMessage = ({ role, content, sentiment }: ChatMessageProps) => {
   return (
     <div
       className={cn(
@@ -22,6 +24,16 @@ export const ChatMessage = ({ role, content }: ChatMessageProps) => {
         )}
       >
         <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+        {sentiment && role === "user" && (
+          <div className="flex items-center gap-2 mt-2 text-xs">
+            <span className={cn("font-medium", getSentimentColor(sentiment.sentiment))}>
+              {getSentimentEmoji(sentiment.sentiment)} {sentiment.sentiment}
+            </span>
+            <span className="text-muted-foreground">
+              Score: {(sentiment.score * 100).toFixed(1)}%
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

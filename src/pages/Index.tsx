@@ -5,10 +5,12 @@ import { TypingIndicator } from "@/components/TypingIndicator";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { analyzeSentiment, SentimentResult } from "@/lib/sentimentAnalysis";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
+  sentiment?: SentimentResult;
 };
 
 const Index = () => {
@@ -31,6 +33,33 @@ const Index = () => {
   }, [messages, isLoading]);
 
   const streamChat = async (userMessages: Message[]) => {
+    // For local development, use a mock response instead of calling Supabase
+    if (import.meta.env.DEV) {
+      // Simulate streaming response for local development
+      const mockResponse = "Hoi! Dit is een test reactie van Chat Sheep. De sentiment analyse werkt! 😊";
+      let currentIndex = 0;
+
+      const streamInterval = setInterval(() => {
+        if (currentIndex < mockResponse.length) {
+          const chunk = mockResponse.slice(currentIndex, currentIndex + 1);
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant") {
+              return prev.map((m, i) =>
+                i === prev.length - 1 ? { ...m, content: last.content + chunk } : m
+              );
+            }
+            return [...prev, { role: "assistant", content: chunk }];
+          });
+          currentIndex++;
+        } else {
+          clearInterval(streamInterval);
+        }
+      }, 50);
+
+      return;
+    }
+
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
     const response = await fetch(CHAT_URL, {
@@ -105,7 +134,16 @@ const Index = () => {
   };
 
   const handleSend = async (input: string) => {
-    const userMessage: Message = { role: "user", content: input };
+    // Analyze sentiment of user input
+    let sentiment: SentimentResult | undefined;
+    try {
+      sentiment = await analyzeSentiment(input);
+    } catch (error) {
+      console.error("Sentiment analysis error:", error);
+      // Continue without sentiment if analysis fails
+    }
+
+    const userMessage: Message = { role: "user", content: input, sentiment };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setIsLoading(true);
@@ -166,7 +204,7 @@ const Index = () => {
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
           {messages.map((message, index) => (
-            <ChatMessage key={index} role={message.role} content={message.content} />
+            <ChatMessage key={index} role={message.role} content={message.content} sentiment={message.sentiment} />
           ))}
           {isLoading && <TypingIndicator />}
           <div ref={messagesEndRef} />
