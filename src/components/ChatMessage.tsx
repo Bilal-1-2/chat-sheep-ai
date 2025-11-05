@@ -30,7 +30,7 @@ export const ChatMessage = ({ role, content, sentiment }: ChatMessageProps) => {
               {getSentimentEmoji(sentiment.sentiment)} {sentiment.sentiment}
             </span>
             <span className="text-muted-foreground">
-              Score: {(sentiment.score * 100).toFixed(1)}%
+              Confidence: {(sentiment.score * 100).toFixed(0)}%
             </span>
           </div>
         )}

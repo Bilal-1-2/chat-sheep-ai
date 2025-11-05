@@ -1,19 +1,17 @@
-import * as tf from '@tensorflow/tfjs';
-import * as sentiment from '@tensorflow-models/sentiment';
+import { pipeline } from '@huggingface/transformers';
 
-let model: sentiment.SentimentModel | null = null;
+let classifier: any = null;
 
 export interface SentimentResult {
   score: number;
-  magnitude: number;
   sentiment: 'positive' | 'negative' | 'neutral';
 }
 
 export const loadSentimentModel = async (): Promise<void> => {
-  if (model) return;
+  if (classifier) return;
 
   try {
-    model = await sentiment.load();
+    classifier = await pipeline('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
   } catch (error) {
     console.error('Failed to load sentiment model:', error);
     throw error;
@@ -21,28 +19,29 @@ export const loadSentimentModel = async (): Promise<void> => {
 };
 
 export const analyzeSentiment = async (text: string): Promise<SentimentResult> => {
-  if (!model) {
+  if (!classifier) {
     await loadSentimentModel();
   }
 
-  if (!model) {
+  if (!classifier) {
     throw new Error('Sentiment model not loaded');
   }
 
-  const result = await model.classify(text);
+  const result = await classifier(text);
+  const label = result[0].label.toLowerCase();
+  const score = result[0].score;
 
   let sentiment: 'positive' | 'negative' | 'neutral';
-  if (result.score > 0.6) {
+  if (label === 'positive') {
     sentiment = 'positive';
-  } else if (result.score < 0.4) {
+  } else if (label === 'negative') {
     sentiment = 'negative';
   } else {
     sentiment = 'neutral';
   }
 
   return {
-    score: result.score,
-    magnitude: result.magnitude || 0,
+    score,
     sentiment,
   };
 };
